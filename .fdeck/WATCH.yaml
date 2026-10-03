@@ -1,0 +1,24 @@
+# Forks watched for ideas. Non-gating; never a merge or cherry-pick source.
+# Per fork: repo, url, added, why. keywords: matched against commit subjects and diffs.
+forks:
+  - repo: open-horizon-labs/oh-omp
+    url: https://github.com/open-horizon-labs/oh-omp
+    added: "2026-10-03"
+    why: >-
+      MIT fork of can1357/oh-my-pi. Its main is far diverged; the value is in small
+      single-purpose feat/* and fix/* branches (credential refresh, invalid_grant retry,
+      working-set cap, compaction formatting).
+  - repo: deniial00/oh-my-pi
+    url: https://github.com/deniial00/oh-my-pi
+    added: "2026-10-03"
+    why: >-
+      MIT fork of can1357/oh-my-pi used as a PR-staging and candidate-fix farm
+      (farm/<hash>/<slug> branches); 11868-followup touches the async tool-completion path.
+keywords:
+  - handoff
+  - compact
+  - threshold
+  - auth-broker
+  - auth-gateway
+  - blockScope
+  - blockedUntil

@@ -1,0 +1,4 @@
+# Patches carried on fork/main. The intake reads this list; nothing hardcodes it.
+# Per entry: slug, branch, commit, files, tests, red_on_base,
+# upstream: {status: draft|opened|merged|refused, ref}.
+patches: []
