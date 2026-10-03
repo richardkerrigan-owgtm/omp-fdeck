@@ -3,6 +3,26 @@
 Base: v18.4.12 (`7318a70cf4`, "chore: bump version to 18.4.12") — pinned by the seat as the
 last SAFE omp version (OmpSafe: proven GREEN, cache 20/20 on oldmac).
 
+## Test execution status
+
+No local run is possible against the real 18.4.12 natives: this M4 has no usable macOS SDK (the
+from-source build gets through compilation but fails at link — `lld` doesn't synthesize Apple's
+`objc_msgSendClass$...` class-stub symbols that Xcode's own `ld64` does for the OAuth-callback
+helper), and 3630 has no CLT at all, and the `@oh-my-pi/pi-natives-darwin-arm64@18.4.12` npm
+prebuilt is blocked by this repo's own `bunfig.toml` `minimumReleaseAge = 259200` (18.4.12
+published 2026-10-02T16:08Z — inside the 3-day window as of this patch).
+
+**PROVISIONAL run only** (natives 18.4.4 ≠ 18.4.12, pinned by exact version in a throwaway 3630
+worktree install, never touching `bunfig.toml`): all 6 touched test files fail at import with
+`SyntaxError: Export named 'readTextFromClipboard' not found` — the 18.4.4 natives package predates
+an export the 18.4.12-era coding-agent source expects. This is a natives-version mismatch, not a
+defect in this patch; it confirms the two package versions are 8 patch releases apart and not
+ABI/API-compatible, so no pass/fail signal from this run is meaningful either way.
+
+**An authoritative re-run against real 18.4.12 natives is due after 2026-10-05T16:08Z**, once
+`@oh-my-pi/pi-natives-darwin-arm64@18.4.12` clears `minimumReleaseAge`.
+
+
 ## BT1 — `ctx.handoff()` on extension contexts
 
 Extension contexts had no non-aborting way to request a self-handoff. `ctx.compact()` exists but
