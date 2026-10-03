@@ -67,6 +67,7 @@ function initializeRunnerForTest(runner: ExtensionRunner | undefined): void {
 		shutdown: () => {},
 		getContextUsage: () => undefined,
 		compact: async () => {},
+		handoff: () => {},
 		getSystemPrompt: () => [],
 	};
 	runner.initialize(actions, contextActions);

@@ -825,6 +825,8 @@ export class AgentSession implements SettingsScope {
 	#branchSummaryAbortController: AbortController | undefined = undefined;
 
 	readonly #handoff: SessionHandoff;
+	#pendingSelfHandoff = false;
+	#selfHandoffSettled: Promise<void> | undefined;
 
 	// Retry state
 	readonly #recovery: TurnRecovery;
@@ -1879,6 +1881,13 @@ export class AgentSession implements SettingsScope {
 			injectIdle: async messages => {
 				const first = messages[0];
 				if (!first) return;
+				// BT2: content delivered while idle (subagent result, background job)
+				// can push stored context over `compaction.thresholdTokens` with no
+				// turn in flight to trigger the post-agent-end check. Run the same
+				// threshold decision before the queued content starts a fresh prompt,
+				// so compaction runs against the smaller history instead of the
+				// content first forcing a whole model turn.
+				await this.#maintenance.checkIdleDeliveryThreshold();
 				this.#beginInFlight();
 				try {
 					await this.agent.prompt(messages.length === 1 ? first : messages);
@@ -6026,7 +6035,7 @@ export class AgentSession implements SettingsScope {
 	 * Wait until streaming, event persistence, and deferred recovery work are fully settled.
 	 * Call outside callbacks whose completion the session awaits to avoid waiting on yourself.
 	 */
-	async waitForIdle(): Promise<void> {
+	async #waitForIdleCore(): Promise<void> {
 		while (true) {
 			await this.agent.waitForIdle();
 			await this.#advisors.waitForPendingCardEvents();
@@ -6035,6 +6044,23 @@ export class AgentSession implements SettingsScope {
 			await this.#drainInFlightEventHandlers();
 			await this.#waitForPostPromptRecovery();
 			if (!this.agent.state.isStreaming && this.#inFlightEventHandlers.size === 0) return;
+		}
+	}
+
+	/**
+	 * Wait until streaming, event persistence, and deferred recovery work are fully settled,
+	 * INCLUDING a self-handoff `scheduleSelfHandoff` deferred against this same idle point —
+	 * without this, an external caller's `waitForIdle()` can resolve before the handoff it is
+	 * waiting on has even started, since nothing else links the two. The deferred handoff's own
+	 * internal wait uses `#waitForIdleCore()` directly (never this method) so it is not waiting
+	 * on its own settlement.
+	 */
+	async waitForIdle(): Promise<void> {
+		await this.#waitForIdleCore();
+		const settling = this.#selfHandoffSettled;
+		if (settling) {
+			await settling;
+			await this.#waitForIdleCore();
 		}
 	}
 	/**
@@ -8023,6 +8049,8 @@ export class AgentSession implements SettingsScope {
 					instructionsOrOptions && typeof instructionsOrOptions === "object" ? instructionsOrOptions : undefined;
 				await this.compact(instructions, options);
 			},
+			handoff: opts =>
+				this.scheduleSelfHandoff(opts?.customInstructions, opts?.signal ? { signal: opts.signal } : undefined),
 			switchSession: async sessionPath => {
 				const success = await this.switchSession(sessionPath);
 				return { cancelled: !success };
@@ -10347,6 +10375,41 @@ export class AgentSession implements SettingsScope {
 	 */
 	handoff(customInstructions?: string, options?: SessionHandoffOptions): Promise<HandoffResult | undefined> {
 		return this.#maintenance.handoff(customInstructions, options);
+	}
+
+	/**
+	 * Request a self-handoff without aborting the running turn: unlike
+	 * `compact()`, this must be safe to call from inside a tool's `execute`.
+	 * The actual `handoff()` call (which writes the `CompactionEntry`) is
+	 * deferred until the session genuinely settles — `#waitForIdleCore()`
+	 * guarantees the current tool call's result is already committed and no
+	 * further continuation is scheduled, the same idle point `agent_end`
+	 * maintenance waits for. (The PUBLIC `waitForIdle()` is not used here: it
+	 * also awaits `#selfHandoffSettled`, which this IIFE is in the middle of
+	 * producing, so calling it here would deadlock on itself.) A second
+	 * request while one is already pending (or running) is a no-op, making
+	 * repeated calls idempotent. `#selfHandoffSettled` lets `waitForIdle()`
+	 * observe and wait out the deferred work from outside.
+	 */
+	scheduleSelfHandoff(customInstructions?: string, options?: SessionHandoffOptions): void {
+		if (this.#pendingSelfHandoff) return;
+		this.#pendingSelfHandoff = true;
+		this.#selfHandoffSettled = (async () => {
+			try {
+				await this.#waitForIdleCore();
+				await this.handoff(customInstructions, options);
+			} catch (error) {
+				logger.warn("Scheduled self-handoff failed", {
+					error: error instanceof Error ? error.message : String(error),
+				});
+			} finally {
+				// `#pendingSelfHandoff` guards re-entry above, so only one of these
+				// IIFEs is ever in flight at a time — clearing unconditionally here
+				// never races a newer call's own settlement promise.
+				this.#pendingSelfHandoff = false;
+				this.#selfHandoffSettled = undefined;
+			}
+		})();
 	}
 
 	#isTerminalYieldToolResult(event: { toolName: string; isError?: boolean; result?: { details?: unknown } }): boolean {
