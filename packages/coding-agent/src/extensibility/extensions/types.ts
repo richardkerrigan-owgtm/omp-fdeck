@@ -421,6 +421,16 @@ export interface CompactOptions {
 }
 
 /**
+ * Extension-facing options for {@link ExtensionContextActions.handoff} /
+ * {@link ExtensionCommandContextActions.handoff}.
+ */
+export interface HandoffOptions {
+	/** Optional focus for the handoff document, same as the `/handoff` command argument. */
+	customInstructions?: string;
+	signal?: AbortSignal;
+}
+
+/**
  * Context passed to extension event handlers.
  */
 // fallow-ignore-next-line code-duplication
@@ -491,6 +501,14 @@ export interface ExtensionContext {
 	getAsyncJobSnapshot(): AsyncJobSnapshot | null;
 	/** Compact the session context (interactive mode shows UI). */
 	compact(instructionsOrOptions?: string | CompactOptions): Promise<void>;
+	/**
+	 * Request a self-handoff: generate a handoff document and commit it as a
+	 * compaction entry, without aborting a turn in flight. Unlike `compact`,
+	 * calling this from a tool's `execute` does not interrupt the running
+	 * turn — the actual handoff runs once the turn settles (`agent_end`).
+	 * A second request while one is already pending is a no-op.
+	 */
+	handoff(opts?: HandoffOptions): void;
 	/** Whether UI is available (false in print/RPC mode) */
 	hasUI: boolean;
 	/** Current working directory */
@@ -1891,6 +1909,14 @@ export interface ExtensionContextActions {
 	shutdown: () => void;
 	getContextUsage: () => ContextUsage | undefined;
 	compact: (instructionsOrOptions?: string | CompactOptions) => Promise<void>;
+	/**
+	 * Request a self-handoff: generate a handoff document and commit it as a
+	 * compaction entry, without aborting a turn in flight. Unlike `compact`,
+	 * calling this from a tool's `execute` does not interrupt the running
+	 * turn — the actual handoff runs once the turn settles (`agent_end`).
+	 * A second request while one is already pending is a no-op.
+	 */
+	handoff: (opts?: HandoffOptions) => void;
 	getSystemPrompt: () => string[];
 	runEphemeralTurn?: (options: EphemeralTurnOptions) => Promise<EphemeralTurnResult>;
 }
@@ -1906,6 +1932,14 @@ export interface ExtensionCommandContextActions {
 	branch: (entryId: string) => Promise<{ cancelled: boolean }>;
 	navigateTree: (targetId: string, options?: { summarize?: boolean }) => Promise<{ cancelled: boolean }>;
 	compact: (instructionsOrOptions?: string | CompactOptions) => Promise<void>;
+	/**
+	 * Request a self-handoff: generate a handoff document and commit it as a
+	 * compaction entry, without aborting a turn in flight. Unlike `compact`,
+	 * calling this from a tool's `execute` does not interrupt the running
+	 * turn — the actual handoff runs once the turn settles (`agent_end`).
+	 * A second request while one is already pending is a no-op.
+	 */
+	handoff: (opts?: HandoffOptions) => void;
 	switchSession: (sessionPath: string) => Promise<{ cancelled: boolean }>;
 	reload: () => Promise<void>;
 }

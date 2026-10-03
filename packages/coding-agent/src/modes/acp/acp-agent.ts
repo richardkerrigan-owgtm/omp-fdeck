@@ -54,6 +54,7 @@ import {
 	timedOutAskDialogResult,
 } from "../../extensibility/extensions";
 import { runExtensionCompact } from "../../extensibility/extensions/compact-handler";
+import { runExtensionHandoff } from "../../extensibility/extensions/handoff-handler";
 import { getSessionSlashCommands } from "../../extensibility/extensions/get-commands-handler";
 import { buildSkillPromptMessage, parseSkillInvocation } from "../../extensibility/skills";
 import { MCPManager } from "../../mcp/manager";
@@ -2595,6 +2596,7 @@ export class AcpAgent implements Agent {
 				getSystemPrompt: () => record.session.systemPrompt,
 				runEphemeralTurn: args => record.session.runEphemeralTurn(args),
 				compact: instructionsOrOptions => runExtensionCompact(record.session, instructionsOrOptions),
+				handoff: opts => runExtensionHandoff(record.session, opts),
 			},
 			{
 				getContextUsage: () => record.session.getContextUsage(),
@@ -2622,6 +2624,7 @@ export class AcpAgent implements Agent {
 					await record.session.reload();
 				},
 				compact: instructionsOrOptions => runExtensionCompact(record.session, instructionsOrOptions),
+				handoff: opts => runExtensionHandoff(record.session, opts),
 			},
 			uiContext,
 			"rpc",

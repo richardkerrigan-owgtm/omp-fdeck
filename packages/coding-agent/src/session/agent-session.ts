@@ -777,6 +777,7 @@ export class AgentSession implements SettingsScope {
 	#branchSummaryAbortController: AbortController | undefined = undefined;
 
 	readonly #handoff: SessionHandoff;
+	#pendingSelfHandoff = false;
 
 	// Retry state
 	readonly #recovery: TurnRecovery;
@@ -1743,6 +1744,13 @@ export class AgentSession implements SettingsScope {
 			injectIdle: async messages => {
 				const first = messages[0];
 				if (!first) return;
+				// BT2: content delivered while idle (subagent result, background job)
+				// can push stored context over `compaction.thresholdTokens` with no
+				// turn in flight to trigger the post-agent-end check. Run the same
+				// threshold decision before the queued content starts a fresh prompt,
+				// so compaction runs against the smaller history instead of the
+				// content first forcing a whole model turn.
+				await this.#maintenance.checkIdleDeliveryThreshold();
 				this.#beginInFlight();
 				try {
 					await this.agent.prompt(messages.length === 1 ? first : messages);
@@ -7716,6 +7724,8 @@ export class AgentSession implements SettingsScope {
 					instructionsOrOptions && typeof instructionsOrOptions === "object" ? instructionsOrOptions : undefined;
 				await this.compact(instructions, options);
 			},
+			handoff: opts =>
+				this.scheduleSelfHandoff(opts?.customInstructions, opts?.signal ? { signal: opts.signal } : undefined),
 			switchSession: async sessionPath => {
 				const success = await this.switchSession(sessionPath);
 				return { cancelled: !success };
@@ -9784,6 +9794,33 @@ export class AgentSession implements SettingsScope {
 	 */
 	handoff(customInstructions?: string, options?: SessionHandoffOptions): Promise<HandoffResult | undefined> {
 		return this.#maintenance.handoff(customInstructions, options);
+	}
+
+	/**
+	 * Request a self-handoff without aborting the running turn: unlike
+	 * `compact()`, this must be safe to call from inside a tool's `execute`.
+	 * The actual `handoff()` call (which writes the `CompactionEntry`) is
+	 * deferred until the session genuinely settles — reusing `waitForIdle()`
+	 * guarantees the current tool call's result is already committed and no
+	 * further continuation is scheduled, the same idle point `agent_end`
+	 * maintenance waits for. A second request while one is already pending
+	 * (or running) is a no-op, making repeated calls idempotent.
+	 */
+	scheduleSelfHandoff(customInstructions?: string, options?: SessionHandoffOptions): void {
+		if (this.#pendingSelfHandoff) return;
+		this.#pendingSelfHandoff = true;
+		void (async () => {
+			try {
+				await this.waitForIdle();
+				await this.handoff(customInstructions, options);
+			} catch (error) {
+				logger.warn("Scheduled self-handoff failed", {
+					error: error instanceof Error ? error.message : String(error),
+				});
+			} finally {
+				this.#pendingSelfHandoff = false;
+			}
+		})();
 	}
 
 	#isTerminalYieldToolResult(event: { toolName: string; isError?: boolean; result?: { details?: unknown } }): boolean {

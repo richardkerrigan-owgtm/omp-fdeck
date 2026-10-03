@@ -1993,6 +1993,32 @@ export class SessionMaintenance {
 	}
 
 	/**
+	 * Idle-delivery threshold check: async content delivered while the session
+	 * is idle (a subagent result, a background job) can push stored context
+	 * past `compaction.thresholdTokens` before any turn runs to reach the
+	 * post-agent-end threshold check (`checkCompaction`, ~3226-3229). Without
+	 * this, the queued delivery starts a whole model turn before compaction
+	 * ever re-evaluates. Mirrors that check's threshold inputs — stored
+	 * tokens only, since there is no fresh assistant `usage` to anchor on —
+	 * and skips the promotion/speculation branches that only apply mid-turn.
+	 */
+	async checkIdleDeliveryThreshold(): Promise<void> {
+		if (this.isCompacting || this.#host.isGeneratingHandoff() || this.#host.isStreaming()) return;
+		const model = this.#model;
+		const contextWindow = model?.contextWindow ?? 0;
+		if (contextWindow <= 0) return;
+		const compactionSettings = cfgCompaction.get(this.#host.settings);
+		if (!compactionSettings.enabled || !hasConfiguredCompactionMethod(compactionSettings)) return;
+		const contextTokens = this.#estimateStoredContextTokens();
+		if (!shouldCompact(contextTokens, contextWindow, compactionSettings)) return;
+		await this.runAutoCompaction("threshold", false, false, true, {
+			autoContinue: false,
+			triggerContextTokens: contextTokens,
+			phase: "standalone_turn",
+		});
+	}
+
+	/**
 	 * Manual handoff: generate a handoff document and commit it as a compaction
 	 * entry on the current session — the document becomes the summary and recent
 	 * history is kept per `compaction.keepRecentTokens`. Unlike `/compact`, the

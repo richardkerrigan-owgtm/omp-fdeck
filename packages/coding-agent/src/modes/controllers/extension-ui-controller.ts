@@ -24,6 +24,7 @@ import type {
 	TerminalInputHandler,
 } from "../../extensibility/extensions";
 import { getSessionSlashCommands } from "../../extensibility/extensions/get-commands-handler";
+import { runExtensionHandoff } from "../../extensibility/extensions/handoff-handler";
 import {
 	type AskDialogPrompt,
 	type AskDialogPromptValue,
@@ -220,6 +221,7 @@ export class ExtensionUiController {
 			shutdown: () => this.ctx.requestShutdown(),
 			getContextUsage: () => this.ctx.session.getContextUsage(),
 			compact: instructionsOrOptions => this.#compactSession(instructionsOrOptions),
+			handoff: opts => runExtensionHandoff(this.ctx.session, opts),
 			getSystemPrompt: () => this.ctx.session.systemPrompt,
 			runEphemeralTurn: args => this.ctx.session.runEphemeralTurn(args),
 		};
@@ -297,6 +299,7 @@ export class ExtensionUiController {
 				return { cancelled: false };
 			},
 			compact: async instructionsOrOptions => this.#handleInteractiveCompact(instructionsOrOptions),
+			handoff: opts => runExtensionHandoff(this.ctx.session, opts),
 			switchSession: async sessionPath => {
 				await this.ctx.prepareSessionSwitch();
 				this.clearHookWidgets();
@@ -442,6 +445,7 @@ export class ExtensionUiController {
 			shutdown: () => this.ctx.requestShutdown(),
 			getContextUsage: () => this.ctx.session.getContextUsage(),
 			compact: instructionsOrOptions => this.#compactSession(instructionsOrOptions),
+			handoff: opts => runExtensionHandoff(this.ctx.session, opts),
 			getSystemPrompt: () => this.ctx.session.systemPrompt,
 			runEphemeralTurn: args => this.ctx.session.runEphemeralTurn(args),
 		};
@@ -516,6 +520,7 @@ export class ExtensionUiController {
 				return { cancelled: false };
 			},
 			compact: async instructionsOrOptions => this.#handleInteractiveCompact(instructionsOrOptions),
+			handoff: opts => runExtensionHandoff(this.ctx.session, opts),
 			switchSession: async sessionPath => {
 				await this.ctx.prepareSessionSwitch();
 				this.clearHookWidgets();

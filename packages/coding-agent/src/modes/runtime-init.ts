@@ -7,6 +7,7 @@
  * caller-supplied hooks.
  */
 import { runExtensionCompact, runExtensionSetModel } from "../extensibility/extensions/compact-handler";
+import { runExtensionHandoff } from "../extensibility/extensions/handoff-handler";
 import { getSessionSlashCommands } from "../extensibility/extensions/get-commands-handler";
 import type { ExtensionError, ExtensionMode, ExtensionUIContext } from "../extensibility/extensions/types";
 import type { AgentSession } from "../session/agent-session";
@@ -148,6 +149,7 @@ export async function initializeExtensions(session: AgentSession, options: Initi
 			getSystemPrompt: () => session.systemPrompt,
 			runEphemeralTurn: args => session.runEphemeralTurn(args),
 			compact: instructionsOrOptions => runExtensionCompact(session, instructionsOrOptions),
+			handoff: opts => runExtensionHandoff(session, opts),
 		},
 		// ExtensionCommandContextActions — commands invokable via prompt("/command")
 		{
@@ -203,6 +205,7 @@ export async function initializeExtensions(session: AgentSession, options: Initi
 				if (result.cancelled && session.sessionFile) throw new Error("Session reload cancelled");
 			},
 			compact: instructionsOrOptions => runExtensionCompact(session, instructionsOrOptions),
+			handoff: opts => runExtensionHandoff(session, opts),
 		},
 		uiContext,
 		mode,

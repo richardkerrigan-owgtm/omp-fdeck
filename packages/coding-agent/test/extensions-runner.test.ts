@@ -147,6 +147,7 @@ describe("ExtensionRunner", () => {
 			shutdown: () => {},
 			getContextUsage: () => undefined,
 			compact: async () => {},
+			handoff: () => {},
 			getSystemPrompt: () => [],
 		};
 
@@ -198,6 +199,7 @@ describe("ExtensionRunner", () => {
 				shutdown: () => {},
 				getContextUsage: () => usage,
 				compact,
+				handoff: () => {},
 				getSystemPrompt: () => [],
 			},
 		);
@@ -897,6 +899,7 @@ describe("ExtensionRunner", () => {
 					shutdown: () => {},
 					getContextUsage: () => undefined,
 					compact: async () => {},
+					handoff: () => {},
 					getSystemPrompt: () => [],
 				},
 			);
@@ -1112,6 +1115,7 @@ describe("ExtensionRunner", () => {
 					shutdown: () => {},
 					getContextUsage: () => undefined,
 					compact: async () => {},
+					handoff: () => {},
 					getSystemPrompt: () => [],
 				},
 			);
@@ -1333,6 +1337,7 @@ describe("ExtensionRunner", () => {
 					shutdown: () => {},
 					getContextUsage: () => undefined,
 					compact: async () => {},
+					handoff: () => {},
 					getSystemPrompt: () => [],
 				},
 			);
@@ -1663,6 +1668,7 @@ describe("ExtensionRunner", () => {
 					shutdown: () => {},
 					getContextUsage: () => undefined,
 					compact: async () => {},
+					handoff: () => {},
 					getSystemPrompt: () => [],
 				},
 				undefined,
@@ -2335,6 +2341,7 @@ describe("ExtensionRunner", () => {
 					shutdown: () => {},
 					getContextUsage: () => undefined,
 					compact: async () => {},
+					handoff: () => {},
 					getSystemPrompt: () => [],
 				},
 			);
@@ -2416,6 +2423,7 @@ describe("ExtensionRunner", () => {
 					shutdown: () => {},
 					getContextUsage: () => undefined,
 					compact: async () => {},
+					handoff: () => {},
 					getSystemPrompt: () => [],
 				},
 			);
@@ -2483,6 +2491,7 @@ describe("ExtensionRunner", () => {
 					shutdown: () => {},
 					getContextUsage: () => undefined,
 					compact: async () => {},
+					handoff: () => {},
 					getSystemPrompt: () => [],
 				},
 			);
@@ -2539,6 +2548,7 @@ describe("ExtensionRunner", () => {
 					shutdown: () => {},
 					getContextUsage: () => undefined,
 					compact: async () => {},
+					handoff: () => {},
 					getSystemPrompt: () => [],
 				},
 				undefined,
@@ -4147,6 +4157,7 @@ describe("ExtensionRunner", () => {
 					shutdown: () => {},
 					getContextUsage: () => undefined,
 					compact: async () => {},
+					handoff: () => {},
 					getSystemPrompt: () => [],
 				},
 			);
@@ -4219,6 +4230,7 @@ describe("ExtensionRunner", () => {
 					shutdown: () => {},
 					getContextUsage: () => undefined,
 					compact: async () => {},
+					handoff: () => {},
 					getSystemPrompt: () => [],
 				},
 			);
@@ -4309,6 +4321,7 @@ describe("ExtensionRunner", () => {
 					shutdown: () => {},
 					getContextUsage: () => undefined,
 					compact: async () => {},
+					handoff: () => {},
 					getSystemPrompt: () => [],
 				},
 			);
